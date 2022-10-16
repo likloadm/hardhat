@@ -76,13 +76,16 @@ export class HttpProvider extends EventEmitter implements EIP1193Provider {
     // We create the error here to capture the stack traces at this point,
     // the async call that follows would probably loose of the stack trace
     const error = new ProviderError("HttpProviderError", -1);
-
     const jsonRpcRequest = this._getJsonRpcRequest(
       args.method,
       args.params as any[]
     );
+//    if (args.method === "eth_sendRawTransaction") {
+//      throw error;
+//    }
     const jsonRpcResponse = await this._fetchJsonRpcResponse(jsonRpcRequest);
-
+    console.log("response!!!", jsonRpcResponse)
+    
     if (isErrorResponse(jsonRpcResponse)) {
       error.message = jsonRpcResponse.error.message;
       error.code = jsonRpcResponse.error.code;
@@ -97,7 +100,7 @@ export class HttpProvider extends EventEmitter implements EIP1193Provider {
     if (args.method === "evm_revert") {
       this.emit(HARDHAT_NETWORK_REVERT_SNAPSHOT_EVENT);
     }
-
+    
     return jsonRpcResponse.result;
   }
 

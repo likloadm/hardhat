@@ -5,6 +5,7 @@ import { FeeMarketEIP1559Transaction } from "@nomicfoundation/ethereumjs-tx";
 import { EIP1193Provider, RequestArguments } from "../../../types";
 import { HardhatError } from "../errors";
 import { ERRORS } from "../errors-list";
+import { bufferToHex, keccak, toBuffer, isHexString } from 'likloadm-ethereumjs-util';
 import {
   rpcAddress,
   rpcData,
@@ -15,7 +16,7 @@ import {
   rpcTransactionRequest,
 } from "../jsonrpc/types/input/transactionRequest";
 import { validateParams } from "../jsonrpc/types/input/validation";
-
+import { QtumFunctionProvider, QtumWallet } from 'qtum-ethers-wrapper';
 import { ProviderWrapperWithChainId } from "./chainId";
 import { derivePrivateKeys } from "./util";
 import { ProviderWrapper } from "./wrapper";
@@ -177,7 +178,6 @@ export class LocalAccountsProvider extends ProviderWrapperWithChainId {
         chainId,
         privateKey
       );
-
       return this._wrappedProvider.request({
         method: "eth_sendRawTransaction",
         params: [bufferToHex(rawTransaction)],
@@ -192,7 +192,7 @@ export class LocalAccountsProvider extends ProviderWrapperWithChainId {
       bufferToHex,
       toBuffer,
       privateToAddress,
-    } = require("@nomicfoundation/ethereumjs-util");
+    } = require("likloadm-ethereumjs-util");
 
     const privateKeys: Buffer[] = localAccountsHexPrivateKeys.map((h) =>
       toBuffer(h)
@@ -240,9 +240,14 @@ export class LocalAccountsProvider extends ProviderWrapperWithChainId {
     chainId: number,
     privateKey: Buffer
   ): Promise<Buffer> {
-    const { AccessListEIP2930Transaction, Transaction } = await import(
+    const { AccessListEIP2930Transaction, Transaction, TransactionFactory} = await import(
       "@nomicfoundation/ethereumjs-tx"
     );
+    const {
+      bufferToHex,
+      toBuffer,
+      privateToAddress,
+    } = require("likloadm-ethereumjs-util");
 
     const { Common } = await import("@nomicfoundation/ethereumjs-common");
 
@@ -250,6 +255,11 @@ export class LocalAccountsProvider extends ProviderWrapperWithChainId {
       ...transactionRequest,
       gasLimit: transactionRequest.gas,
     };
+    const qtumProvider = new QtumFunctionProvider(async (method: any, params: any):Promise<unknown> => {
+      const result = await this._wrappedProvider.request({ method, params, });
+      return result;
+    });
+    
 
     // We don't specify a hardfork here because the default hardfork should
     // support all possible types of transactions.
@@ -260,34 +270,34 @@ export class LocalAccountsProvider extends ProviderWrapperWithChainId {
     // we convert the access list to the type
     // that AccessListEIP2930Transaction expects
     const accessList = txData.accessList?.map(
-      ({ address, storageKeys }) => [address, storageKeys] as [Buffer, Buffer[]]
+      ({ address, storageKeys }) => [address.toString(), storageKeys] as [string, Buffer[]]
     );
 
     let transaction;
-    if (txData.maxFeePerGas !== undefined) {
-      transaction = FeeMarketEIP1559Transaction.fromTxData(
-        {
-          ...txData,
-          accessList,
-          gasPrice: undefined,
-        },
-        { common }
-      );
-    } else if (accessList !== undefined) {
-      transaction = AccessListEIP2930Transaction.fromTxData(
-        {
-          ...txData,
-          accessList,
-        },
-        { common }
-      );
-    } else {
-      transaction = Transaction.fromTxData(txData, { common });
-    }
+    transaction = TransactionFactory.fromTxData(txData);
+    let to;
+    let data;
+    if (txData.to)
+      to = txData.to.toString("hex");
+    if (txData.data)
+      data = "0x"+txData.data.toString("hex");
+    const ethTx = {
+    ...transaction,
+    chainId,
+    from: "0x"+privateToAddress(privateKey).toString("hex"),
+    to: to,
+    data: data,
+    nonce: transaction.nonce.toString(),
+    gasLimit: transaction.gasLimit.toString(),
+    gasPrice: undefined,
+    value: transaction.value.toString(),
+    accessList: undefined,
+    };
+  
+    const qtumWallet = new QtumWallet(privateKey, qtumProvider, {filterDust: false});
+    const signedEthTx = await qtumWallet.signTransaction(ethTx)
 
-    const signedTransaction = transaction.sign(privateKey);
-
-    return signedTransaction.serialize();
+    return Buffer.from(signedEthTx, "hex");
   }
 }
 
@@ -326,10 +336,10 @@ abstract class SenderProvider extends ProviderWrapper {
     ) {
       // TODO: Should we validate this type?
       const tx: JsonRpcTransactionData = params[0];
-
+      
       if (tx !== undefined && tx.from === undefined) {
         const senderAccount = await this._getSender();
-
+      
         if (senderAccount !== undefined) {
           tx.from = senderAccount;
         } else if (method === "eth_sendTransaction") {
@@ -337,7 +347,7 @@ abstract class SenderProvider extends ProviderWrapper {
         }
       }
     }
-
+    
     return this._wrappedProvider.request(args);
   }
 

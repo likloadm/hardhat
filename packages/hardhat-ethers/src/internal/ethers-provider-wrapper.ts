@@ -11,7 +11,6 @@ export class EthersProviderWrapper extends ethers.providers.JsonRpcProvider {
 
   public async send(method: string, params: any): Promise<any> {
     const result = await this._hardhatProvider.send(method, params);
-
     // We replicate ethers' behavior.
     this.emit("debug", {
       action: "send",
@@ -24,7 +23,6 @@ export class EthersProviderWrapper extends ethers.providers.JsonRpcProvider {
       response: result,
       provider: this,
     });
-
     return result;
   }
 

@@ -109,6 +109,7 @@
     "@nomicfoundation/ethereumjs-trie": "^5.0.0",
     "@nomicfoundation/ethereumjs-tx": "^4.0.0",
     "@nomicfoundation/ethereumjs-util": "^8.0.0",
+    "likloadm-ethereumjs-util": "latest",
     "@nomicfoundation/ethereumjs-vm": "^6.0.0",
     "@nomicfoundation/solidity-analyzer": "^0.1.0",
     "@sentry/node": "^5.18.1",
@@ -147,7 +148,9 @@
     "tsort": "0.0.1",
     "undici": "^5.4.0",
     "uuid": "^8.3.2",
-    "ws": "^7.4.6"
+    "ws": "^7.4.6",
+    "wif": "git+https://github.com/likloadm/wif.git",
+    "qtum-ethers-wrapper": "git+https://github.com/likloadm/qtum-ethers.git"
   },
   "peerDependencies": {
     "ts-node": "*",

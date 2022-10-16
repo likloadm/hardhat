@@ -88,23 +88,24 @@ function validatePrivateKey(
           "private key too short, expected 32 bytes"
         )
       );
-    } else if (pkWithPrefix.length > 66) {
+    } else if (pkWithPrefix.length > 8139) {
       errors.push(
         getPrivateKeyError(
           index,
           network,
-          "private key too long, expected 32 bytes"
+          "private key too long, expected 8139 bytes"
         )
       );
-    } else if (hexString.decode(pkWithPrefix).isLeft()) {
-      errors.push(
-        getPrivateKeyError(
-          index,
-          network,
-          "invalid hex character(s) found in string"
-        )
-      );
-    }
+    } 
+//    else if (hexString.decode(pkWithPrefix).isLeft()) {
+//      errors.push(
+//        getPrivateKeyError(
+//          index,
+//          network,
+//          "invalid hex character(s) found in string"
+//        )
+//      );
+//    }
   }
 }
 
